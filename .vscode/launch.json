@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test MilkFlavoredChocolate",
+            "program": "./.build/debug/MilkFlavoredChocolatePackageTests.xctest",
+            "cwd": "${workspaceFolder:MilkFlavoredChocolate}",
+            "env": {
+                "path": "C:\\Library\\Developer\\Platforms\\Windows.platform\\Developer\\Library\\XCTest-development\\usr\\bin;${env:PATH}"
+            },
+            "preLaunchTask": "swift: Build All"
+        }
+    ]
+}
