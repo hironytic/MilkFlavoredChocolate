@@ -1,5 +1,5 @@
 //
-// StringExtensions.swift
+// SwiftExtensions.swift
 // MilkFlavoredChocolate
 //
 // Copyright (c) 2021 Hironori Ichimiya <hiron@hironytic.com>
@@ -38,6 +38,22 @@ extension String {
         wcscpy_s(outBuffer.baseAddress, outBuffer.count, buf)
         initializedCount = outBuffer.count
       }
+    }
+  }
+}
+
+extension Array where Element == WCHAR {
+  public func withUnsafeLPCWSTR<Result>(_ body: (LPCWSTR?) throws -> Result) rethrows -> Result {
+    return try withUnsafeBufferPointer { try body($0.baseAddress) }
+  }
+}
+
+extension Optional where Wrapped == Array<WCHAR> {
+  public func withUnsafeLPCWSTR<Result>(_ body: (LPCWSTR?) throws -> Result) rethrows -> Result {
+    if let wrapped = self {
+      return try wrapped.withUnsafeLPCWSTR(body)
+    } else {
+      return try body(nil)
     }
   }
 }
