@@ -25,13 +25,14 @@
 
 import WinSDK
 
-private var _shared: Application!
-
 open class Application {
-  public required init() {
+  public let hInstance: HINSTANCE
 
+  public required init() {
+    hInstance = GetModuleHandleW(nil)
   }
 
+  private static var _shared: Application!
   public static var shared: Self {
     return _shared as! Self
   }
@@ -39,14 +40,13 @@ open class Application {
   open class func main() {
     _shared = self.init()
 
-    if _shared.initInstance() {
+    if (try? _shared.initInstance()) != nil {
       _shared.messageLoop()
     }
     _shared.exitInstance()
   }
 
-  open func initInstance() -> Bool {
-    return true
+  open func initInstance() throws {
   }
 
   open func exitInstance() {
