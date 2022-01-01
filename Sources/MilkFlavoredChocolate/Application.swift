@@ -2,7 +2,7 @@
 // Application.swift
 // MilkFlavoredChocolate
 //
-// Copyright (c) 2021 Hironori Ichimiya <hiron@hironytic.com>
+// Copyright (c) 2021,2022 Hironori Ichimiya <hiron@hironytic.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,18 +25,24 @@
 
 import WinSDK
 
+/// The base class of Windows application object.
 open class Application {
+  /// Handle to the current application instance.
   public let hInstance: HINSTANCE
 
+  /// Initialize the object.
   public required init() {
     hInstance = GetModuleHandleW(nil)
   }
 
   private static var _shared: Application!
+
+  /// The only `Application` instance.
   public static var shared: Self {
     return _shared as! Self
   }
 
+  /// Entry point of application.
   open class func main() {
     _shared = self.init()
 
@@ -46,12 +52,17 @@ open class Application {
     _shared.exitInstance()
   }
 
+  /// Initialize the application.
+  /// For example, register a window class and construct
+  /// a main window of the application.
   open func initInstance() throws {
   }
 
+  /// Clean up the application when it terminates.
   open func exitInstance() {
   }
 
+  /// Do a message loop.
   open func messageLoop() {
     var msg = MSG()
     while GetMessageW(&msg, nil, 0, 0) {
