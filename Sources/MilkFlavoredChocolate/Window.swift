@@ -2,7 +2,7 @@
 // Window.swift
 // MilkFlavoredChocolate
 //
-// Copyright (c) 2021 Hironori Ichimiya <hiron@hironytic.com>
+// Copyright (c) 2021,2022 Hironori Ichimiya <hiron@hironytic.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -25,15 +25,15 @@
 
 import WinSDK
 
+public enum MFCError: Error {
+  case registerClassError
+  case createWindowError
+}
+
 private var windowMap: [HWND: Window] = [:]
+private var windowClassMap: [String: ATOM] = [:]
 
-open class Window {
-  public var hWnd: HWND?
-
-  public required init(hWnd: HWND) {
-    self.hWnd = hWnd
-  }
-
+public enum WindowClassRegistrar {
   public static func registerClass(
     style: UINT,
     cbClsExtra: Int32,
@@ -45,8 +45,9 @@ open class Window {
     menuName: String?,
     className: String,
     hIconSm: HICON?    
-  ) -> WindowClassAtom? {
-    let atom: ATOM? = (menuName?.toWchars()).withUnsafeLPCWSTR { lpszMenuName in
+  ) throws -> ATOM
+  {
+    let atomOrNil: ATOM? = (menuName?.toWchars()).withUnsafeLPCWSTR { lpszMenuName in
       className.toWchars().withUnsafeLPCWSTR { lpszClassName in
         var wc = WNDCLASSEXW( cbSize: UINT(MemoryLayout<WNDCLASSEXW>.size),
                               style: style,
@@ -63,7 +64,73 @@ open class Window {
         return RegisterClassExW(&wc)      
       }
     }
-    return atom.map { WindowClassAtom(rawValue: $0) }
+
+    guard let atom = atomOrNil else { throw MFCError.registerClassError }
+    windowClassMap[className] = atom
+    return atom
+  }
+
+  public static func search(for className: String) -> ATOM? {
+    return windowClassMap[className]
+  }
+}
+
+open class Window {
+  public var hWnd: HWND?
+
+  public required init(hWnd: HWND) {
+    self.hWnd = hWnd
+  }
+
+  open class var windowClassName: String { preconditionFailure("Please override this property") }
+  
+  open class func registerClass() throws -> ATOM { preconditionFailure("Please override this property") }
+
+  public static func create(
+    dwExStyle: DWORD = 0,
+    windowName: String,
+    dwStyle: DWORD,
+    x: Int32,
+    y: Int32,
+    nWidth: Int32,
+    nHeight: Int32,
+    hWndParent: HWND?,
+    hMenu: HMENU?,
+    hInstance: HINSTANCE = Application.shared.hInstance
+  ) throws -> Self {
+    let atom = try WindowClassRegistrar.search(for: windowClassName) ?? registerClass()
+
+    var result: Self? = nil
+    let factory = WindowFactory { hWnd in
+      let created = Self.init(hWnd: hWnd)
+      result = created
+      return created
+    }
+    let lpParam = Unmanaged<WindowFactory>.passUnretained(factory).toOpaque()
+
+    let hWnd = CreateWindowExW(
+      dwExStyle,
+      UnsafePointer(bitPattern: UInt(atom)),
+      windowName.toWchars(),
+      dwStyle,
+      x,
+      y,
+      nWidth,
+      nHeight,
+      hWndParent,
+      hMenu,
+      hInstance,
+      lpParam
+    )
+    if hWnd == nil {
+      throw MFCError.createWindowError
+    }
+
+    if let ret = result {
+      return ret
+    } else {
+      throw MFCError.createWindowError
+    }
   }
 
   open func wndProc(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
@@ -113,51 +180,5 @@ private class WindowFactory {
   let factory: (HWND) -> Window
   init(factory: @escaping (HWND) -> Window) {
     self.factory = factory
-  }
-}
-
-public struct WindowClassAtom {
-  public var rawValue: ATOM
-
-  public init(rawValue: ATOM) {
-    self.rawValue = rawValue
-  }
-
-  public func createWindow<W: Window>(    
-    windowType: W.Type,
-    dwExStyle: DWORD = 0,
-    windowName: String,
-    dwStyle: DWORD,
-    x: Int32,
-    y: Int32,
-    nWidth: Int32,
-    nHeight: Int32,
-    hWndParent: HWND?,
-    hMenu: HMENU?,
-    hInstance: HINSTANCE = Application.shared.hInstance
-  ) -> W {
-    var result: W? = nil    
-    let factory = WindowFactory { hWnd in
-      let created = W.init(hWnd: hWnd)
-      result = created
-      return created
-    }
-    let lpParam = Unmanaged<WindowFactory>.passUnretained(factory).toOpaque()
-
-    let hWnd = CreateWindowExW(
-      dwExStyle,
-      UnsafePointer(bitPattern: UInt(rawValue)),
-      windowName.toWchars(),
-      dwStyle,
-      x,
-      y,
-      nWidth,
-      nHeight,
-      hWndParent,
-      hMenu,
-      hInstance,
-      lpParam
-    )
-    return result!
   }
 }
