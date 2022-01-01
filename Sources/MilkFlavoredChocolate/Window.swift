@@ -46,8 +46,8 @@ open class Window {
     className: String,
     hIconSm: HICON?    
   ) -> WindowClassAtom? {
-    let atom: ATOM? = (menuName?.wide).withUnsafeLPCWSTR { lpszMenuName in
-      className.wide.withUnsafeLPCWSTR { lpszClassName in
+    let atom: ATOM? = (menuName?.toWchars()).withUnsafeLPCWSTR { lpszMenuName in
+      className.toWchars().withUnsafeLPCWSTR { lpszClassName in
         var wc = WNDCLASSEXW( cbSize: UINT(MemoryLayout<WNDCLASSEXW>.size),
                               style: style,
                               lpfnWndProc: mfcWindowProc,
@@ -147,7 +147,7 @@ public struct WindowClassAtom {
     let hWnd = CreateWindowExW(
       dwExStyle,
       UnsafePointer(bitPattern: UInt(rawValue)),
-      windowName.wide,
+      windowName.toWchars(),
       dwStyle,
       x,
       y,

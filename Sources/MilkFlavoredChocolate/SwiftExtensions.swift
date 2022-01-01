@@ -2,7 +2,7 @@
 // SwiftExtensions.swift
 // MilkFlavoredChocolate
 //
-// Copyright (c) 2021 Hironori Ichimiya <hiron@hironytic.com>
+// Copyright (c) 2021,2022 Hironori Ichimiya <hiron@hironytic.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,17 @@
 import WinSDK
 
 extension String {
-  public init(from wchars: [WCHAR]) {
+  /// Initialize a string from zero-terminated WCHAR array.
+  /// - Parameter wchars: The array of WCHAR.
+  public init(fromWchars wchars: [WCHAR]) {
     self = wchars.withUnsafeBufferPointer {
       return String(decodingCString: $0.baseAddress!, as: UTF16.self)
     }
   }
 
-  public var wide: [WCHAR] {
+  /// Create zero-terminated WCHAR array from this string.
+  /// - Returns: The array of WCHAR.
+  public func toWchars() -> [WCHAR] {
     return withCString(encodedAs: UTF16.self) { buf in
       [WCHAR](unsafeUninitializedCapacity: utf16.count + 1) { (outBuffer, initializedCount) in
         wcscpy_s(outBuffer.baseAddress, outBuffer.count, buf)
@@ -43,12 +47,20 @@ extension String {
 }
 
 extension Array where Element == WCHAR {
+  /// Calls a closure with a pointer to a wchar string.
+  /// - Parameter body: A closure with an LPCWSTR parameter.
+  ///                   If it has a return value, that value is used as the return value
+  ///                   of this function.
   public func withUnsafeLPCWSTR<Result>(_ body: (LPCWSTR?) throws -> Result) rethrows -> Result {
     return try withUnsafeBufferPointer { try body($0.baseAddress) }
   }
 }
 
 extension Optional where Wrapped == Array<WCHAR> {
+  /// Calls a closure with a pointer to a wchar string.
+  /// - Parameter body: A closure with an LPCWSTR parameter, or nil when the optional value itself is nil.
+  ///                   If it has a return value, that value is used as the return value
+  ///                   of this function.
   public func withUnsafeLPCWSTR<Result>(_ body: (LPCWSTR?) throws -> Result) rethrows -> Result {
     if let wrapped = self {
       return try wrapped.withUnsafeLPCWSTR(body)
