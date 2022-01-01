@@ -23,32 +23,50 @@
 // THE SOFTWARE.
 //
 
+import Foundation
 import WinSDK
 
-public enum MFCError: Error {
-  case registerClassError
-  case createWindowError
-}
-
 private var windowMap: [HWND: Window] = [:]
-private var windowClassMap: [String: ATOM] = [:]
+private var windowClassMap: [String: WindowClassRegistrar.Registration] = [:]
 
+/// Functions about ragistration of window class.
 public enum WindowClassRegistrar {
+  /// The result of the registration.
+  public struct Registration {
+    internal var atom: ATOM
+    internal init(atom: ATOM) {
+      self.atom = atom
+    }
+  }
+
+  /// Register window class.
+  /// - Parameters:
+  ///   - style: The class styles.
+  ///   - cbClsExtra: The number of extra bytes to allocate following the window-class structure.
+  ///   - cbWndExtra: The number of extra bytes to allocate following the window instance.
+  ///   - hInstance: A handle to the instance that contains the window procedure for the class.
+  ///   - hIcon: A handle to the class icon.
+  ///   - hCursor: A handle to the class cursor.
+  ///   - hbrBackground: A handle to the class background brush.
+  ///   - menuName: The resource name of the class menu.
+  ///   - className: A window class name.
+  ///   - hIconSm: A handle to a small icon that is associated with the window class.
+  /// - Returns: The result of the registration.
   public static func registerClass(
     style: UINT,
-    cbClsExtra: Int32,
-    cbWndExtra: Int32,
+    cbClsExtra: Int32 = 0,
+    cbWndExtra: Int32 = 0,
     hInstance: HINSTANCE = Application.shared.hInstance,
     hIcon: HICON?,
     hCursor: HCURSOR?,
     hbrBackground: HBRUSH?,
     menuName: String?,
     className: String,
-    hIconSm: HICON?    
-  ) throws -> ATOM
+    hIconSm: HICON?
+  ) throws -> Registration
   {
-    let atomOrNil: ATOM? = (menuName?.toWchars()).withUnsafeLPCWSTR { lpszMenuName in
-      className.toWchars().withUnsafeLPCWSTR { lpszClassName in
+    let atom: ATOM = try (menuName?.toWchars()).withUnsafeLPCWSTR { lpszMenuName in
+      return try className.toWchars().withUnsafeLPCWSTR { lpszClassName in
         var wc = WNDCLASSEXW( cbSize: UINT(MemoryLayout<WNDCLASSEXW>.size),
                               style: style,
                               lpfnWndProc: mfcWindowProc,
@@ -61,31 +79,90 @@ public enum WindowClassRegistrar {
                               lpszMenuName: lpszMenuName,
                               lpszClassName: lpszClassName,
                               hIconSm: hIconSm)
-        return RegisterClassExW(&wc)      
+        let atom = RegisterClassExW(&wc)
+        if atom == 0 {
+          throw MFCError.registerClassError(GetLastError())
+        }
+        return atom
       }
     }
 
-    guard let atom = atomOrNil else { throw MFCError.registerClassError }
-    windowClassMap[className] = atom
-    return atom
+    let registration = Registration(atom: atom)
+    windowClassMap[className] = registration
+    return registration
   }
 
-  public static func search(for className: String) -> ATOM? {
+  /// Search for window class registration.
+  /// - Parameter className: A window class name.
+  /// - Returns: Result of registration, or `nil` when it is not registered.
+  public static func search(for className: String) -> Registration? {
     return windowClassMap[className]
   }
 }
 
+/// The base class of a window.
 open class Window {
+  /// The window handle.
   public var hWnd: HWND?
 
+  /// Initializes the object
+  /// - Parameter hWnd: The window handle of the window.
   public required init(hWnd: HWND) {
     self.hWnd = hWnd
   }
 
-  open class var windowClassName: String { preconditionFailure("Please override this property") }
+  /// The name of window class.
+  ///
+  /// The default implementation uses `NSStringFromClass(self)`.
+  /// You can change this behavior by overriding this class method.
+  open class var windowClassName: String {
+    return NSStringFromClass(self)
+  }
   
-  open class func registerClass() throws -> ATOM { preconditionFailure("Please override this property") }
+  /// Register its window class.
+  /// - Returns: The result of registration.
+  /// 
+  /// The default implementation uses parameters below.
+  /// You can change this behavior by overriding this class method.
+  /// 
+  /// ```swift
+  /// func registerClass() throws -> WindowClassRegistrar.Registration {
+  ///   return try WindowClassRegistrar.registerClass(
+  ///     style: UINT(CS_HREDRAW | CS_VREDRAW),
+  ///     hIcon: nil,
+  ///     hCursor: nil,
+  ///     hbrBackground: nil,
+  ///     menuName: nil,
+  ///     className: windowClassName,
+  ///     hIconSm: nil
+  ///   )
+  /// }
+  /// ```
+  open class func registerClass() throws -> WindowClassRegistrar.Registration {
+    return try WindowClassRegistrar.registerClass(
+      style: UINT(CS_HREDRAW | CS_VREDRAW),
+      hIcon: nil,
+      hCursor: nil,
+      hbrBackground: nil,
+      menuName: nil,
+      className: windowClassName,
+      hIconSm: nil
+    )
+  }
 
+  /// Creates a window.
+  /// - Parameters:
+  ///   - dwExStyle: The extended window style of the window being created.
+  ///   - windowName: The window name.
+  ///   - dwStyle: The style of the window being created.
+  ///   - x: The initial horizontal position of the window.
+  ///   - y: The initial vertical position of the window
+  ///   - nWidth: The width, in device units, of the window.
+  ///   - nHeight: The height, in device units, of the window.
+  ///   - hWndParent: A handle to the parent or owner window of the window being created.
+  ///   - hMenu: A handle to a menu.
+  ///   - hInstance: A handle to the instance of the module to be associated with the window.
+  /// - Returns: The created window object.
   public static func create(
     dwExStyle: DWORD = 0,
     windowName: String,
@@ -98,19 +175,14 @@ open class Window {
     hMenu: HMENU?,
     hInstance: HINSTANCE = Application.shared.hInstance
   ) throws -> Self {
-    let atom = try WindowClassRegistrar.search(for: windowClassName) ?? registerClass()
+    let registration = try WindowClassRegistrar.search(for: windowClassName) ?? registerClass()
 
-    var result: Self? = nil
-    let factory = WindowFactory { hWnd in
-      let created = Self.init(hWnd: hWnd)
-      result = created
-      return created
-    }
+    let factory = TypedWindowFactory<Self>()
     let lpParam = Unmanaged<WindowFactory>.passUnretained(factory).toOpaque()
 
     let hWnd = CreateWindowExW(
       dwExStyle,
-      UnsafePointer(bitPattern: UInt(atom)),
+      UnsafePointer(bitPattern: UInt(registration.atom)),
       windowName.toWchars(),
       dwStyle,
       x,
@@ -123,17 +195,26 @@ open class Window {
       lpParam
     )
     if hWnd == nil {
-      throw MFCError.createWindowError
+      throw MFCError.createWindowError(GetLastError())
     }
 
-    if let ret = result {
-      return ret
+    if let window = factory.window {
+      return window
     } else {
-      throw MFCError.createWindowError
+      throw MFCError.createWindowError(0)
     }
   }
 
-  open func wndProc(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+  /// Window procedure.
+  /// - Parameters:
+  ///   - hWnd: A handle to the window.
+  ///   - uMsg: The message.
+  ///   - wParam: Additional message information.
+  //    - lParam: Additional message information.
+  /// - Returns: The return value is the result of the message processing.
+  ///
+  /// You can handle messages sent to this window by overriding this method.
+  open func windowProc(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
     return DefWindowProcW(hWnd, uMsg, wParam, lParam)
   }
 }
@@ -148,7 +229,7 @@ private func mfcWindowProc(hWnd: HWND?, uMsg: UINT, wParam: WPARAM, lParam: LPAR
     let lpCreateStruct: UnsafePointer<CREATESTRUCTW>? = UnsafePointer(bitPattern: Int(lParam))
     if let lpCreateParams = lpCreateStruct?.pointee.lpCreateParams {
       let factory = Unmanaged<WindowFactory>.fromOpaque(lpCreateParams).takeUnretainedValue()
-      window = factory.factory(hWnd)
+      window = factory.create(hWnd: hWnd)
       windowMap[hWnd] = window
     } else {
       window = nil
@@ -165,7 +246,7 @@ private func mfcWindowProc(hWnd: HWND?, uMsg: UINT, wParam: WPARAM, lParam: LPAR
 
   let result: LRESULT
   if let window = window {
-    result = window.wndProc(hWnd, uMsg, wParam, lParam)
+    result = window.windowProc(hWnd, uMsg, wParam, lParam)
     if isNCDestroy {
       window.hWnd = nil
     }
@@ -177,8 +258,16 @@ private func mfcWindowProc(hWnd: HWND?, uMsg: UINT, wParam: WPARAM, lParam: LPAR
 }
 
 private class WindowFactory {
-  let factory: (HWND) -> Window
-  init(factory: @escaping (HWND) -> Window) {
-    self.factory = factory
+  func create(hWnd: HWND) -> Window {
+    preconditionFailure()
+  }
+}
+
+private class TypedWindowFactory<W: Window>: WindowFactory {
+  var window: W? = nil
+  override func create(hWnd: HWND) -> Window {
+    let window = W.init(hWnd: hWnd)
+    self.window = window
+    return window
   }
 }
