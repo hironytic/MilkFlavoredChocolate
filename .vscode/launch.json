@@ -10,6 +10,24 @@
                 "path": "C:\\Library\\Developer\\Platforms\\Windows.platform\\Developer\\Library\\XCTest-development\\usr\\bin;${env:PATH}"
             },
             "preLaunchTask": "swift: Build All"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug SampleHelloSwift",
+            "program": "${workspaceFolder}/.build/debug/SampleHelloSwift",
+            "args": [],
+            "cwd": "${workspaceFolder:MilkFlavoredChocolate}",
+            "preLaunchTask": "swift: Build Debug SampleHelloSwift"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release SampleHelloSwift",
+            "program": "${workspaceFolder}/.build/release/SampleHelloSwift",
+            "args": [],
+            "cwd": "${workspaceFolder:MilkFlavoredChocolate}",
+            "preLaunchTask": "swift: Build Release SampleHelloSwift"
         }
     ]
 }
