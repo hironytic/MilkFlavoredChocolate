@@ -52,24 +52,24 @@ final class HelloSwiftMainWindow: Window {
     )
   }
 
-  override func windowProc(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+  override func windowProc(_ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
     switch Int32(uMsg) {
       case WM_CREATE:
-        return onCreate(hWnd, uMsg, wParam, lParam)
+        return onCreate(uMsg, wParam, lParam)
 
       case WM_DESTROY:
-        return onDestroy(hWnd, uMsg, wParam, lParam)
+        return onDestroy(uMsg, wParam, lParam)
       
       case WM_COMMAND:
-        return onCommand(hWnd, uMsg, wParam, lParam)
+        return onCommand(uMsg, wParam, lParam)
       
       default:
-        return super.windowProc(hWnd, uMsg, wParam, lParam)
+        return super.windowProc(uMsg, wParam, lParam)
     }
   }
 
-  private func onCreate(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
-    let result = super.windowProc(hWnd, uMsg, wParam, lParam)
+  private func onCreate(_ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+    let result = super.windowProc(uMsg, wParam, lParam)
     guard result != -1 else { return result }
 
     hWndSayButton = CreateWindowExW(0, WC_BUTTON.toWchars(), "Say".toWchars(),
@@ -82,12 +82,12 @@ final class HelloSwiftMainWindow: Window {
     return result
   }
 
-  private func onDestroy(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+  private func onDestroy(_ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
     PostQuitMessage(0)
     return 0
   }
 
-  private func onCommand(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+  private func onCommand(_ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
     let controlId = LOWORD(wParam)
     switch controlId {
     case sayButtonId:
@@ -95,7 +95,7 @@ final class HelloSwiftMainWindow: Window {
       return 0
     
     default:
-      return super.windowProc(hWnd, uMsg, wParam, lParam)
+      return super.windowProc(uMsg, wParam, lParam)
     }
   }
 }

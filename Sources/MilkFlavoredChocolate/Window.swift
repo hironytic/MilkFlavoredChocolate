@@ -207,14 +207,13 @@ open class Window {
 
   /// Window procedure.
   /// - Parameters:
-  ///   - hWnd: A handle to the window.
   ///   - uMsg: The message.
   ///   - wParam: Additional message information.
   //    - lParam: Additional message information.
   /// - Returns: The return value is the result of the message processing.
   ///
   /// You can handle messages sent to this window by overriding this method.
-  open func windowProc(_ hWnd: HWND, _ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
+  open func windowProc(_ uMsg: UINT, _ wParam: WPARAM, _ lParam: LPARAM) -> LRESULT {
     return DefWindowProcW(hWnd, uMsg, wParam, lParam)
   }
 }
@@ -246,7 +245,7 @@ private func mfcWindowProc(hWnd: HWND?, uMsg: UINT, wParam: WPARAM, lParam: LPAR
 
   let result: LRESULT
   if let window = window {
-    result = window.windowProc(hWnd, uMsg, wParam, lParam)
+    result = window.windowProc(uMsg, wParam, lParam)
     if isNCDestroy {
       window.hWnd = nil
     }
