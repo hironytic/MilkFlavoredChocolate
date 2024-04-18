@@ -15,7 +15,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug SampleHelloSwift",
-            "program": "${workspaceFolder}/.build/debug/SampleHelloSwift",
+            "program": "${workspaceFolder:MilkFlavoredChocolate}\\.build\\debug\\SampleHelloSwift.exe",
             "args": [],
             "cwd": "${workspaceFolder:MilkFlavoredChocolate}",
             "preLaunchTask": "swift: Build Debug SampleHelloSwift"
@@ -24,7 +24,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Release SampleHelloSwift",
-            "program": "${workspaceFolder}/.build/release/SampleHelloSwift",
+            "program": "${workspaceFolder:MilkFlavoredChocolate}\\.build\\release\\SampleHelloSwift.exe",
             "args": [],
             "cwd": "${workspaceFolder:MilkFlavoredChocolate}",
             "preLaunchTask": "swift: Build Release SampleHelloSwift"
