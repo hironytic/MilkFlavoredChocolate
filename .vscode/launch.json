@@ -12,7 +12,7 @@
             "preLaunchTask": "swift: Build All"
         },
         {
-            "type": "lldb",
+            "type": "swift",
             "request": "launch",
             "name": "Debug SampleHelloSwift",
             "program": "${workspaceFolder:MilkFlavoredChocolate}/.build/debug/SampleHelloSwift",
@@ -21,7 +21,7 @@
             "preLaunchTask": "swift: Build Debug SampleHelloSwift"
         },
         {
-            "type": "lldb",
+            "type": "swift",
             "request": "launch",
             "name": "Release SampleHelloSwift",
             "program": "${workspaceFolder:MilkFlavoredChocolate}/.build/release/SampleHelloSwift",
